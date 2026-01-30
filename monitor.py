@@ -162,7 +162,6 @@ def check_for_changes():
         
         # Skip header row and process data
         for row_idx, row in enumerate(data[1:], start=1):
-        for row_idx, row in enumerate(data[1:], start=1):
             # Ensure row has enough columns
             while len(row) < len(COLUMN_MAP):
                 row.append('')
