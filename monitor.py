@@ -25,6 +25,8 @@ COLUMN_MAP = {
     'VICTORS': 10,
     'IMPOSSIBLE': 11,
     'CHALLENGE': 12,
+    'TRACKER_USERNAME': 22,
+    'DISCORD_ID': 23,
 }
 
 # Store previous victors state (dict of level_id -> set of victors)
@@ -103,10 +105,18 @@ def fetch_sheet_data():
         return None
 
 
-def send_discord_message(victor_name, level_name, creators, difficulty):
+def send_discord_message(victor_name, level_name, creators, difficulty, username_to_id_map=None):
     """Send message to Discord webhook"""
     difficulty_emoji = get_difficulty_emoji(difficulty)
-    message = f"**{victor_name}** has beaten **{level_name}** by {creators} - Difficulty: {difficulty} [{difficulty_emoji}]"
+    
+    # Format victor mention if Discord ID is available
+    if username_to_id_map and victor_name in username_to_id_map:
+        discord_id = username_to_id_map[victor_name]
+        victor_display = f"<@{discord_id}> ({victor_name})"
+    else:
+        victor_display = victor_name
+    
+    message = f"**{victor_display}** has beaten **{level_name}** by {creators} - Difficulty: {difficulty} [{difficulty_emoji}]"
     
     payload = {
         "content": message
@@ -115,11 +125,11 @@ def send_discord_message(victor_name, level_name, creators, difficulty):
     try:
         response = requests.post(DISCORD_WEBHOOK_URL, json=payload, timeout=10)
         if response.status_code in [200, 204]:
-            print(f"✓ Discord message sent: {message}")
+            print("[OK] Discord message sent: {}".format(message))
         else:
-            print(f"✗ Failed to send Discord message. Status: {response.status_code}")
+            print("[ERR] Failed to send Discord message. Status: {}".format(response.status_code))
     except Exception as e:
-        print(f"✗ Error sending Discord message: {e}")
+        print("[ERR] Error sending Discord message: {}".format(e))
 
 
 def check_for_changes():
@@ -135,10 +145,23 @@ def check_for_changes():
             print("No data found in sheet")
             return
         
+        # Build username to Discord ID mapping
+        username_to_id_map = {}
+        for row in data[1:]:
+            while len(row) < len(COLUMN_MAP):
+                row.append('')
+            
+            username = row[COLUMN_MAP['TRACKER_USERNAME']].strip() if COLUMN_MAP['TRACKER_USERNAME'] < len(row) else ''
+            discord_id = row[COLUMN_MAP['DISCORD_ID']].strip() if COLUMN_MAP['DISCORD_ID'] < len(row) else ''
+            
+            if username and discord_id:
+                username_to_id_map[username] = discord_id
+        
         # Build current victors dict
         current_victors_dict = {}
         
         # Skip header row and process data
+        for row_idx, row in enumerate(data[1:], start=1):
         for row_idx, row in enumerate(data[1:], start=1):
             # Ensure row has enough columns
             while len(row) < len(COLUMN_MAP):
@@ -174,7 +197,7 @@ def check_for_changes():
                 # Send individual notification for each new victor
                 print(f"Change detected for level: {level_name}")
                 for victor in sorted(new_victors):
-                    send_discord_message(victor, level_name, creators, difficulty)
+                    send_discord_message(victor, level_name, creators, difficulty, username_to_id_map)
         
         # Replace previous victors with current ones
         for level_id, data_dict in current_victors_dict.items():
@@ -183,12 +206,12 @@ def check_for_changes():
         # Mark first check as done
         if not first_check_done:
             first_check_done = True
-            print("✓ Initial check completed - baseline established")
+            print("[OK] Initial check completed - baseline established")
         else:
-            print("✓ Check completed")
+            print("[OK] Check completed")
     
     except Exception as e:
-        print(f"✗ Error during check: {e}")
+        print("[ERR] Error during check: {}".format(e))
 
 
 def main():
@@ -202,7 +225,7 @@ def main():
     
     # Verify Discord webhook is configured
     if "YOUR_WEBHOOK" in DISCORD_WEBHOOK_URL:
-        print("\n⚠️  WARNING: Discord webhook URL not configured!")
+        print("\n[WARN]  WARNING: Discord webhook URL not configured!")
         print("Please update DISCORD_WEBHOOK_URL in config.py")
         return
     
@@ -216,7 +239,7 @@ def main():
     else:
         schedule.every(int(CHECK_INTERVAL)).minutes.do(check_for_changes)
     
-    print(f"\n✓ Monitoring started. Will check every {CHECK_INTERVAL} minutes.")
+    print(f"\n[OK] Monitoring started. Will check every {CHECK_INTERVAL} minutes.")
     print("Press Ctrl+C to stop.\n")
     
     # Keep running
@@ -225,9 +248,8 @@ def main():
             schedule.run_pending()
             time.sleep(1)
     except KeyboardInterrupt:
-        print("\n✓ Monitoring stopped.")
+        print("\n[OK] Monitoring stopped.")
 
 
 if __name__ == '__main__':
     main()
-

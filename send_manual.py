@@ -24,6 +24,8 @@ COLUMN_MAP = {
     'VICTORS': 10,
     'IMPOSSIBLE': 11,
     'CHALLENGE': 12,
+    'TRACKER_USERNAME': 22,
+    'DISCORD_ID': 23,
 }
 
 # Difficulty emoji mapping
@@ -98,10 +100,18 @@ def fetch_sheet_data():
         return None
 
 
-def send_discord_message(victor_name, level_name, creators, difficulty):
+def send_discord_message(victor_name, level_name, creators, difficulty, username_to_id_map=None):
     """Send message to Discord webhook"""
     difficulty_emoji = get_difficulty_emoji(difficulty)
-    message = f"**{victor_name}** has beaten **{level_name}** by {creators} - Difficulty: {difficulty} [{difficulty_emoji}]"
+    
+    # Format victor mention if Discord ID is available
+    if username_to_id_map and victor_name in username_to_id_map:
+        discord_id = username_to_id_map[victor_name]
+        victor_display = f"<@{discord_id}> ({victor_name})"
+    else:
+        victor_display = victor_name
+    
+    message = f"**{victor_display}** has beaten **{level_name}** by {creators} - Difficulty: {difficulty} [{difficulty_emoji}]"
     
     payload = {
         "content": message
@@ -134,7 +144,21 @@ def main():
         print("✗ No data found in sheet")
         return
     
-    print(f"✓ Loaded {len(data) - 1} levels\n")
+    print(f"✓ Loaded {len(data) - 1} levels")
+    
+    # Build username to Discord ID mapping
+    username_to_id_map = {}
+    for row in data[1:]:
+        while len(row) < len(COLUMN_MAP):
+            row.append('')
+        
+        username = row[COLUMN_MAP['TRACKER_USERNAME']].strip() if COLUMN_MAP['TRACKER_USERNAME'] < len(row) else ''
+        discord_id = row[COLUMN_MAP['DISCORD_ID']].strip() if COLUMN_MAP['DISCORD_ID'] < len(row) else ''
+        
+        if username and discord_id:
+            username_to_id_map[username] = discord_id
+    
+    print(f"✓ Found {len(username_to_id_map)} Discord user mappings\n")
     
     # Get row number from user
     if len(sys.argv) > 1:
@@ -202,7 +226,7 @@ def main():
     print()
     
     # Send the message
-    send_discord_message(newest_victor, level_name, creators, difficulty)
+    send_discord_message(newest_victor, level_name, creators, difficulty, username_to_id_map)
 
 
 if __name__ == '__main__':
