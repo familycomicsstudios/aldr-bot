@@ -26,7 +26,7 @@ COLUMN_MAP = {
     'IMPOSSIBLE': 11,
     'CHALLENGE': 12,
     'TRACKER_USERNAME': 22,
-    'DISCORD_ID': 23,
+    'DISCORD_ID': 24,
 }
 
 # Store previous victors state (dict of level_id -> set of victors)
