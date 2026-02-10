@@ -26,7 +26,7 @@ COLUMN_MAP = {
     'IMPOSSIBLE': 11,
     'CHALLENGE': 12,
     'TRACKER_USERNAME': 22,
-    'DISCORD_ID': 24,
+    'DISCORD_ID': 23,
 }
 
 # Store previous victors state (dict of level_id -> set of victors)
@@ -64,26 +64,36 @@ def get_difficulty_emoji(difficulty_str):
     # Try to parse as numeric difficulty
     try:
         difficulty = float(difficulty_str)
-        if difficulty < 1.5:
+        if difficulty < 2.0:
             return '<:easy:1464320027963424912>'
-        elif difficulty < 2.5:
+        elif difficulty < 3.0:
             return '<:medium:1464320095034802289>'
-        elif difficulty < 3.5:
+        elif difficulty < 4.0:
             return '<:hard:1464320167571095766>'
-        elif difficulty < 4.5:
+        elif difficulty < 5.0:
             return '<:harder:1464320225075007632>'
-        elif difficulty < 5.5:
+        elif difficulty < 6.0:
             return '<:insane:1464320293622386812>'
-        elif difficulty < 6.5:
+        elif difficulty < 7.0:
             return '<:expert:1464320350237102337>'
-        elif difficulty < 7.5:
+        elif difficulty < 8.0:
             return '<:extreme:1464320430658551838>'
-        elif difficulty < 8.5:
+        elif difficulty < 9.0:
             return '<:madness:1464320499600462119>'
-        elif difficulty < 9.5:
+        elif difficulty < 10.0:
             return '<:master:1464320549600755937>'
-        else:
+        elif difficulty < 11.0:
             return '<:grandmaster:1464320611038924874>'
+        elif difficulty < 12.0:
+            return '<:gm1:1464320687953940543>'
+        elif difficulty < 13.0:
+            return '<:gm2:1464320747613978748>'
+        elif difficulty < 14.0:
+            return '<:tas:1464320806162268222>'
+        elif difficulty < 15.0:
+            return '<:tas1:1464320856275550414>'
+        else:
+            return '<:tas2:1464320904061518007>'
     except ValueError:
         # If can't parse, return the original difficulty
         return difficulty_str
