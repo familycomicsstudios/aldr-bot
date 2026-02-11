@@ -25,11 +25,12 @@ COLUMN_MAP = {
     'IMPOSSIBLE': 11,
     'CHALLENGE': 12,
     'TRACKER_USERNAME': 22,
-    'DISCORD_ID': 23,
+    'DISCORD_ID': 24,
 }
 
 # Difficulty emoji mapping
 DIFFICULTY_EMOJI_MAP = {
+    'effortless': '<:effortless:1470940267782869188>',
     'easy': '<:easy:1464320027963424912>',
     'medium': '<:medium:1464320095034802289>',
     'hard': '<:hard:1464320167571095766>',
@@ -59,7 +60,9 @@ def get_difficulty_emoji(difficulty_str):
     # Try to parse as numeric difficulty
     try:
         difficulty = float(difficulty_str)
-        if difficulty < 2.0:
+        if difficulty < 1.0:
+            return '<:effortless:1470940267782869188>'
+        elif difficulty < 2.0:
             return '<:easy:1464320027963424912>'
         elif difficulty < 3.0:
             return '<:medium:1464320095034802289>'
