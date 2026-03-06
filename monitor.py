@@ -8,7 +8,7 @@ import requests
 from datetime import datetime
 from io import StringIO
 import csv
-from config import DISCORD_WEBHOOK_URL, SHEET_TSV_URL, CHECK_INTERVAL
+from config import DISCORD_WEBHOOK_URL, EVENTS_WEBHOOK_URL, SHEET_TSV_URL, CHECK_INTERVAL
 
 # Sheet columns mapping
 COLUMN_MAP = {
@@ -31,6 +31,7 @@ COLUMN_MAP = {
 
 # Store previous victors state (dict of level_id -> set of victors)
 previous_victors = {}
+previous_levels = {}
 first_check_done = False
 
 # Difficulty emoji mapping
@@ -145,9 +146,22 @@ def send_discord_message(victor_name, level_name, creators, difficulty, username
         print("[ERR] Error sending Discord message: {}".format(e))
 
 
+def send_event_message(message):
+    """Send non-victor level events to the events webhook"""
+    payload = {"content": message}
+    try:
+        response = requests.post(EVENTS_WEBHOOK_URL, json=payload, timeout=10)
+        if response.status_code in [200, 204]:
+            print("[OK] Event message sent: {}".format(message))
+        else:
+            print("[ERR] Failed to send event message. Status: {}".format(response.status_code))
+    except Exception as e:
+        print("[ERR] Error sending event message: {}".format(e))
+
+
 def check_for_changes():
     """Check for changes in the spreadsheet"""
-    global previous_victors, first_check_done
+    global previous_victors, previous_levels, first_check_done
     
     print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Checking for changes...")
     
@@ -210,10 +224,35 @@ def check_for_changes():
                 print(f"Change detected for level: {level_name}")
                 for victor in sorted(new_victors):
                     send_discord_message(victor, level_name, creators, difficulty, username_to_id_map)
+
+            # Non-victor events: placement and difficulty updates
+            if first_check_done:
+                previous_level = previous_levels.get(level_id)
+                if previous_level is None:
+                    difficulty_emoji = get_difficulty_emoji(difficulty)
+                    message = (
+                        f"{level_name} by {creators} has been placed at a difficulty "
+                        f"of {difficulty} ({difficulty_emoji})"
+                    )
+                    send_event_message(message)
+                else:
+                    previous_difficulty = previous_level.get('difficulty', '')
+                    if difficulty != previous_difficulty:
+                        difficulty_emoji = get_difficulty_emoji(difficulty)
+                        message = (
+                            f"{level_name} by {creators}'s difficulty has been changed "
+                            f"to {difficulty} ({difficulty_emoji})"
+                        )
+                        send_event_message(message)
         
         # Replace previous victors with current ones
         for level_id, data_dict in current_victors_dict.items():
             previous_victors[level_id] = data_dict['victors']
+            previous_levels[level_id] = {
+                'level_name': data_dict['level_name'],
+                'creators': data_dict['creators'],
+                'difficulty': data_dict['difficulty'],
+            }
         
         # Mark first check as done
         if not first_check_done:
@@ -246,7 +285,7 @@ def main():
     
     # Schedule checks - convert to seconds if less than 1 minute
     if CHECK_INTERVAL < 1:
-        interval_seconds = CHECK_INTERVAL * 60
+        interval_seconds = max(1, int(round(CHECK_INTERVAL * 60)))
         schedule.every(interval_seconds).seconds.do(check_for_changes)
     else:
         schedule.every(int(CHECK_INTERVAL)).minutes.do(check_for_changes)
