@@ -231,7 +231,7 @@ def check_for_changes():
                 if previous_level is None:
                     difficulty_emoji = get_difficulty_emoji(difficulty)
                     message = (
-                        f"{level_name} by {creators} has been placed at a difficulty "
+                        f"**{level_name}** by {creators} has been placed at a difficulty "
                         f"of {difficulty} ({difficulty_emoji})"
                     )
                     send_event_message(message)
@@ -240,7 +240,7 @@ def check_for_changes():
                     if difficulty != previous_difficulty:
                         difficulty_emoji = get_difficulty_emoji(difficulty)
                         message = (
-                            f"{level_name} by {creators}'s difficulty has been changed "
+                            f"**{level_name}** by {creators}'s difficulty has been changed "
                             f"to {difficulty} ({difficulty_emoji})"
                         )
                         send_event_message(message)
